@@ -136,7 +136,6 @@ main.go{opacity:1}
 #mus.on .ps{display:block}
 #mus.on{animation:beat 1.6s ease-in-out infinite}
 @keyframes beat{50%{box-shadow:0 0 0 8px rgba(185,151,91,.2)}}
-#ytwrap{position:fixed;right:0;bottom:0;width:200px;height:200px;opacity:.01;pointer-events:none;z-index:-1;overflow:hidden}
 #mus.err{opacity:.6}
 #toast{position:fixed;z-index:70;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));translate:-50% 20px;max-width:90vw;padding:12px 20px;border-radius:14px;background:var(--ink);color:#fbf1dc;font-size:.95rem;text-align:center;opacity:0;pointer-events:none;transition:.4s}
 #toast.show{opacity:1;translate:-50% 0}
@@ -208,7 +207,7 @@ body.mo{overflow:hidden}
   <svg class="pl" viewBox="0 0 24 24"><path d="M9 18V6l10 6zM9 18"/></svg>
   <svg class="ps" viewBox="0 0 24 24"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>
 </button>
-<div id="ytwrap" aria-hidden="true"><div id="ytp"></div></div>
+<audio id="song" src="song.mp3" preload="auto" loop playsinline></audio>
 <div id="toast" role="status"></div>
 
 <main id="main">
@@ -420,70 +419,36 @@ $('#calLink').href=CAL_URL;
 const b=$('#mus'),t=$('#toast');let tm;
 function toast(x,ms){t.textContent=x;t.classList.add('show');clearTimeout(tm);tm=setTimeout(()=>t.classList.remove('show'),ms||4600)}
 
-/* الأغنية: مشغّل يوتيوب مخفي يبدأ من الدقيقة 1:00 ويعيد الدورة منها */
+/* الأغنية: ملف صوت محلي (بدون إعلانات) يبدأ عند فتح الظرف ويعيد الدورة */
 const Music=(function(){
-  const VIDEO_ID='Hp8WTVqR_0U',START=60,YT_URL='https://youtu.be/Hp8WTVqR_0U?t=60';
-  let p=null,ready=false,failed=false,started=false,userPaused=false,wantPlay=false,playing=false,errShown=false;
+  const VOL=0.55;                          /* مستوى صوت متوسط: لا واطي ولا عالي */
+  const a=$('#song');
+  let userPaused=false,started=false,playing=false,failed=false,fade=null;
+  a.volume=0;
   function ui(on){playing=on;b.classList.toggle('on',on)}
-  let failMsg='';
-  function fail(msg){failed=true;failMsg=msg;b.classList.add('err');if(opened&&!errShown){errShown=true;toast(msg,6500)}}
-  function load(){
-    window.onYouTubeIframeAPIReady=function(){
-      try{
-        const vars={start:START,controls:0,disablekb:1,fs:0,rel:0,playsinline:1,iv_load_policy:3,modestbranding:1};
-        if(/^https?:$/.test(location.protocol))vars.origin=location.origin;
-        p=new YT.Player('ytp',{width:200,height:200,videoId:VIDEO_ID,playerVars:vars,events:{onReady,onStateChange,onError}});
-      }catch(e){fail('تعذّر تجهيز مشغّل الأغنية.')}
-    };
-    const s=document.createElement('script');s.src='https://www.youtube.com/iframe_api';s.async=true;
-    s.onerror=()=>fail('تعذّر تحميل مشغّل الأغنية، تحقّق من الاتصال بالإنترنت.');
-    document.head.appendChild(s);
+  function fadeTo(v,ms){
+    clearInterval(fade);const from=a.volume,t0=performance.now();
+    fade=setInterval(()=>{const k=Math.min(1,(performance.now()-t0)/ms);a.volume=Math.max(0,Math.min(1,from+(v-from)*k));if(k>=1)clearInterval(fade)},50);
   }
-  function start(){
-    if(!ready||failed)return;
-    try{
-      if(!started)p.seekTo(START,true);
-      p.unMute();p.setVolume(100);p.playVideo();
-    }catch(e){fail('تعذّر تشغيل الأغنية.')}
+  function play(){
+    const pr=a.play();
+    if(pr&&pr.then)pr.then(()=>{started=true;fadeTo(VOL,1800)}).catch(()=>{
+      if(opened)toast('إذا لم تبدأ الأغنية، اضغط زر الموسيقى في أعلى الصفحة.')});
   }
-  function onReady(){
-    ready=true;
-    try{p.seekTo(START,true);p.playVideo()}catch(e){}   /* محاولة التشغيل التلقائي */
-    setTimeout(()=>{if(!playing)wantPlay=true},1500);
-    if(wantPlay&&!userPaused)start();
-  }
-  function onStateChange(e){
-    const S=YT.PlayerState;
-    if(e.data===S.PLAYING){
-      if(!started){started=true;try{if(p.getCurrentTime()<START-1)p.seekTo(START,true)}catch(_){}}
-      ui(true);
-    }else if(e.data===S.PAUSED){ui(false)}
-    else if(e.data===S.ENDED){ui(false);if(!userPaused){try{p.seekTo(START,true);p.playVideo()}catch(_){}}}
-  }
-  function onError(e){
-    const c=e&&e.data;
-    fail(c===101||c===150||c===153?'صاحب الفيديو لا يسمح بتشغيله داخل المواقع.':(c===100||c===2?'تعذّر العثور على الأغنية.':'تعذّر تشغيل الأغنية.'));
-  }
-  /* أول تفاعل من الزائر (الضغط على الظرف أو أي نقرة) */
-  function gesture(){
-    if(failed){if(!errShown){errShown=true;toast(failMsg,6500)}return}
-    if(userPaused||playing)return;
-    if(!ready){wantPlay=true;return}
-    start();
-    setTimeout(()=>{if(!playing&&!userPaused&&!failed&&opened)toast('إذا لم تبدأ الأغنية، اضغط زر الموسيقى في أعلى الصفحة.')},2200);
-  }
+  a.addEventListener('playing',()=>ui(true));
+  a.addEventListener('pause',()=>ui(false));
+  a.addEventListener('error',()=>{failed=true;b.classList.add('err');if(opened)toast('تعذّر تشغيل الأغنية.',5200)});
+  function gesture(){if(userPaused||playing||failed)return;play()}
   ['click','touchend','keydown'].forEach(ev=>document.addEventListener(ev,function once(){
-    if(!opened)return;                     /* يبدأ التشغيل عند فتح الظرف أو أول تفاعل بعده */
+    if(!opened)return;
     document.removeEventListener(ev,once,true);
     if(!started&&!userPaused)gesture();
   },true));
   b.addEventListener('click',()=>{
-    if(failed){toast(failMsg||'تعذّر تشغيل الأغنية داخل الموقع.',5200);return}
-    if(!ready){wantPlay=true;userPaused=false;toast('جارٍ تجهيز الأغنية…',2200);return}
-    if(playing){userPaused=true;try{p.pauseVideo()}catch(_){}}
-    else{userPaused=false;try{if(!started)p.seekTo(START,true);p.unMute();p.playVideo()}catch(_){fail('تعذّر تشغيل الأغنية.')}}
+    if(failed){toast('تعذّر تشغيل الأغنية.',4000);return}
+    if(playing){userPaused=true;a.pause()}
+    else{userPaused=false;a.volume=0;play()}
   });
-  load();
   return{gesture};
 })();
 
