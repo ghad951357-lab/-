@@ -306,10 +306,9 @@ body.mo{overflow:hidden}
       <h2 id="doneTitle">شكرًا لتأكيد حضورك</h2>
       <p id="doneText"></p>
       <div class="mdl-actions">
-        <a class="btn s" id="calLink" href="#" target="_blank" rel="noopener">
-          <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
-          أضف الموعد إلى التقويم
-        </a>
+        <button class="btn p" id="rOk" type="button" data-close>
+          <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px;margin-inline-end:6px"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>تأكيد الحضور
+        </button>
         <button class="btn s" id="rEdit" type="button">تعديل التأكيد</button>
         <button class="lnk" id="rCancel" type="button">إلغاء التأكيد</button>
         <p id="cancelAsk" hidden>هل تريد إلغاء تأكيد حضورك؟ <button class="lnk" id="cancelYes" type="button">نعم، إلغاء</button> <button class="lnk" id="cancelNo" type="button">رجوع</button></p>
@@ -411,10 +410,6 @@ function tick(){
 }
 tick();setInterval(tick,1000);
 
-/* رابط التقويم (16:00 إلى 18:00 بتوقيت UTC) */
-const CAL_URL='https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent('خطوبة جهاد وديما')+'&dates=20261105T160000Z/20261105T180000Z&location='+encodeURIComponent('قاعة أعمدة، الزرقاء')+'&details='+encodeURIComponent('اللهم بارك لهما وبارك عليهما واجمع بينهما في خير');
-$('#calLink').href=CAL_URL;
-
 /* تنبيه قصير */
 const b=$('#mus'),t=$('#toast');let tm;
 function toast(x,ms){t.textContent=x;t.classList.add('show');clearTimeout(tm);tm=setTimeout(()=>t.classList.remove('show'),ms||4600)}
@@ -480,7 +475,7 @@ function showDone(d,isNew){
   $('#doneTitle').textContent=isNew===false?'تم حفظ التعديل':'شكرًا لتأكيد حضورك';
   $('#doneText').textContent='تم تسجيل حضورك يا '+d.name+' لعدد '+(GEN[d.count]||d.count+' أشخاص')+'. نتشرف بحضوركم ونسعد بلقائكم بإذن الله.';
   $('#rsvpOpenTxt').textContent='تم تأكيد حضورك · تعديل';
-  setTimeout(()=>$('#calLink').focus(),60);
+  setTimeout(()=>$('#rOk').focus(),60);
 }
 function openModal(){
   lastFocus=document.activeElement;R.hidden=false;document.body.classList.add('mo');
